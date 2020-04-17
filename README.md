@@ -52,3 +52,48 @@
 | code     | Integer  | 执行结果 code |
 | msg      | String   | 执行结果说明  |
 | result   | Array    | 集合列表      |
+
+# 连接mysql
+
+在项目的根目录下建立文件`/config/db.js`，指定下列 MySQL 或 Sqlite 数据库（可选）连接信息：
+```javascript
+module.exports = {
+  mysql: {
+    master: {
+      connectionLimit: 10,
+      host: '',
+      port: '',
+      user: '',
+      password: '',
+      database: ''
+    },
+    write: {
+      connectionLimit: 10,
+      host: '',
+      port: '',
+      user: '',
+      password: '',
+      database: ''
+    }
+  },
+  sqlite: {
+    path: ''
+  }
+}
+```
+参考：https://www.npmjs.com/package/mysql
+
+参考：https://github.com/JoshuaWise/better-sqlite3/blob/HEAD/docs/api.md
+
+# 上传导出文件
+
+上传文件需要在项目根目录`/back/config/fs.js`中指定文件保存目录`rootDir: '文件夹路径'`。
+导出文件时为将生成的excel文件保存在服务器中，默认保存在根目录/back/public/文件夹下，如需指定目录需在根目录`/back/config/fs.js`中指定生成文件保存目录`outDir: '文件夹路径'`。支持从环境变量中取值
+```javascript
+module.exports = {
+  local: {
+    rootDir: process.env.TMS_FINDER_FS_ROOTDIR || 'storage',   // 指定保存文件的目录, 需在/data文件夹下建立/data/upload文件夹
+    outDir: process.env.TMS_FINDER_FS_OUTDIR || 'storage'     //导出文件输出目录
+  }
+}
+```

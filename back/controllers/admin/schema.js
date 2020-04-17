@@ -1,35 +1,11 @@
 const _ = require('lodash')
-const { Ctrl, ResultData } = require('tms-koa')
-const { Context } = require('../../context')
+const { ResultData, ResultFault } = require('tms-koa')
 const ObjectId = require('mongodb').ObjectId
+const SchemaBase = require('../schemaBase')
 
-class Schema extends Ctrl {
-  /**
-   * 完成信息列表
-   */
-  async list() {
-    const client = await Context.mongoClient()
-    return client
-      .db('tms_admin')
-      .collection('mongodb_object')
-      .find({ type: 'schema' })
-      .toArray()
-      .then(schemas => new ResultData(schemas))
-  }
-  /**
-   * 简单信息列表
-   */
-  async listSimple() {
-    const client = await Context.mongoClient()
-    return client
-      .db('tms_admin')
-      .collection('mongodb_object')
-      .find(
-        { type: 'schema' },
-        { projection: { _id: 1, title: 1, description: 1 } }
-      )
-      .toArray()
-      .then(schemas => new ResultData(schemas))
+class Schema extends SchemaBase {
+  constructor(...args) {
+    super(...args)
   }
   /**
    *
@@ -37,7 +13,10 @@ class Schema extends Ctrl {
   async create() {
     let info = this.request.body
     info.type = 'schema'
-    const client = await Context.mongoClient()
+    if (!info.scope)
+      info.scope = 'document'
+
+    const client = this.mongoClient
     return client
       .db('tms_admin')
       .collection('mongodb_object')
@@ -51,7 +30,7 @@ class Schema extends Ctrl {
     const { id } = this.request.query
     let info = this.request.body
     info = _.omit(info, ['_id', 'name'])
-    const client = await Context.mongoClient()
+    const client = this.mongoClient
     return client
       .db('tms_admin')
       .collection('mongodb_object')
@@ -67,12 +46,21 @@ class Schema extends Ctrl {
    */
   async remove() {
     const { id } = this.request.query
-    const client = await Context.mongoClient()
-    return client
-      .db('tms_admin')
-      .collection('mongodb_object')
+    if (!id) return new ResultFault("参数不完整")
+
+    const client = this.mongoClient
+    const cl = client.db('tms_admin').collection('mongodb_object')
+    
+    // 是否正在使用
+    let rst = await cl.findOne({schema_id: id, type: "collection"})
+    if (rst) {
+      return new ResultFault("集合列正在被使用不能删除")
+    }
+
+    return cl
       .deleteOne({ _id: new ObjectId(id), type: 'schema' })
       .then(() => new ResultData('ok'))
   }
 }
+
 module.exports = Schema

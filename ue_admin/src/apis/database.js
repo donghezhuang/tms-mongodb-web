@@ -1,6 +1,6 @@
 import { TmsAxios } from 'tms-vue'
 
-const base = '/api/admin/db'
+const base = (process.env.VUE_APP_BACK_API_BASE || '') + '/admin/db'
 
 export default {
   list() {

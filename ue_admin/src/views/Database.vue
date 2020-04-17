@@ -5,7 +5,10 @@
     :leftWidth="'20%'"
   >
     <template v-slot:header>
-      <router-link to="/">返回数据库{{ dbName }}</router-link>
+      <el-breadcrumb separator-class="el-icon-arrow-right">
+        <el-breadcrumb-item :to="{ path: '/home' }">首页</el-breadcrumb-item>
+        <el-breadcrumb-item>{{dbName}}</el-breadcrumb-item>
+      </el-breadcrumb>
     </template>
     <template v-slot:center>
       <el-table :data="collections" stripe style="width: 100%">
@@ -29,13 +32,13 @@
         <el-table-column fixed="right" label="操作" width="120">
           <template slot-scope="scope">
             <el-button
-              @click="editCollection(scope.row)"
+              @click="editCollection(scope.row, scope.$index)"
               type="text"
               size="mini"
               >修改</el-button
             >
             <el-button
-              @click="removeCollection(scope.row)"
+              @click="handleCollection(scope.row)"
               type="text"
               size="mini"
               >删除</el-button
@@ -45,20 +48,16 @@
       </el-table>
     </template>
     <template v-slot:right>
-      <el-button @click="createCollection">添加集合</el-button>
+      <el-button @click="createCollection">添加文件</el-button>
     </template>
   </tms-frame>
 </template>
 
 <script>
 import Vue from 'vue'
-import { mapState } from 'vuex'
+import { mapState, mapMutations, mapActions } from 'vuex'
 import { Frame, Flex } from 'tms-vue-ui'
 Vue.use(Frame).use(Flex)
-import { Table, TableColumn, Button } from 'element-ui'
-Vue.use(Table)
-  .use(TableColumn)
-  .use(Button)
 import CollectionEditor from '../components/CollectionEditor.vue'
 
 export default {
@@ -71,40 +70,34 @@ export default {
     return {}
   },
   methods: {
-    listCollection() {
-      this.$store.dispatch({ type: 'listCollection', db: this.dbName })
-    },
+    ...mapMutations([
+      'appendCollection',
+      'updateCollection'
+    ]),
+    ...mapActions([
+      'listCollection',
+      'removeCollection'
+    ]),
     createCollection() {
       let editor = new Vue(CollectionEditor)
       editor.open('create', this.dbName).then(newCollection => {
-        this.$store.commit({
-          type: 'appendCollection',
-          collection: newCollection
-        })
+        this.appendCollection({collection: newCollection})
       })
     },
-    editCollection(collection) {
+    editCollection(collection, index) {
       let editor = new Vue(CollectionEditor)
-      editor.open('update', this.dbName, collection).then(newCollection => {
-        Object.keys(newCollection).forEach(k => {
-          Vue.set(collection, k, newCollection[k])
-        })
-        this.$store.commit({
-          type: 'updateCollection',
-          collection
-        })
+      editor.open('update', this.dbName, {...collection, fromDatabase: collection.name}).then(newCollection => {
+        this.updateCollection({collection: newCollection, index})
       })
     },
-    removeCollection(collection) {
-      this.$store.dispatch({
-        type: 'removeCollection',
-        db: this.dbName,
-        collection
+    handleCollection(collection) {
+      this.$customeConfirm('集合', () => {
+        return this.removeCollection({db: this.dbName, collection})
       })
-    }
+    },
   },
   mounted() {
-    this.listCollection()
+    this.listCollection({db: this.dbName})
   }
 }
 </script>

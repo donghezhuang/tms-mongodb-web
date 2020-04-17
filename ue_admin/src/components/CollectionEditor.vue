@@ -37,14 +37,6 @@
   </el-dialog>
 </template>
 <script>
-import Vue from 'vue'
-import { Dialog, Form, FormItem, Input, Button } from 'element-ui'
-Vue.use(Dialog)
-  .use(Form)
-  .use(FormItem)
-  .use(Input)
-  .use(Button)
-
 import apiCollection from '../apis/collection'
 import apiSchema from '../apis/schema'
 
@@ -81,7 +73,7 @@ export default {
           .then(newCollection => this.$emit('submit', newCollection))
       else if (this.mode === 'update')
         apiCollection
-          .update(this.dbName, this.collection.name, this.collection)
+          .update(this.dbName, this.collection.fromDatabase, this.collection)
           .then(newCollection => this.$emit('submit', newCollection))
     },
     open(mode, dbName, collection) {

@@ -48,10 +48,9 @@
   </el-dialog>
 </template>
 <script>
-import { doc as apiDoc } from '../apis'
 
 export default {
-  name: 'SchemaEditor',
+  name: 'SelectCondition',
   props: {
     dialogVisible: { default: true },
     condition: {
@@ -90,9 +89,9 @@ export default {
       closeOnClickModal: false,
       columnName: '',
       timer: null,
-      dbName: '',
-      clName: '',
-      page: {}
+      listByColumn: null,
+      page: {},
+      conditions: []
     }
   },
   computed: {
@@ -132,6 +131,11 @@ export default {
       this.condition.multipleSelection = this.condition.selectResult
     },
     handleInputChange(val) {
+      this.condition.rule.filter = this.conditions.filter
+      this.condition.rule.orderBy = this.conditions.orderBy
+      if (!this.condition.rule.filter[this.columnName]){
+        this.condition.rule.filter[this.columnName] = {}
+      }
       this.condition.rule.filter[this.columnName].keyword = val
       clearTimeout(this.timer)
       this.timer = setTimeout(() => {
@@ -139,7 +143,13 @@ export default {
       }, 500)
     },
     updateByColumn(isLoadMore) {
-      apiDoc.byColumnVal(this.dbName, this.clName, this.columnName, this.condition.rule.filter, this.condition.rule.orderBy, this.page.at, this.page.size).then(matchRes => {
+      this.listByColumn(
+        this.columnName, 
+        this.condition.rule.filter, 
+        this.condition.rule.orderBy, 
+        this.page.at, 
+        this.page.size
+      ).then(matchRes => {
         if(isLoadMore){
           this.condition.selectResult.push(...matchRes)
         }else {
@@ -169,16 +179,13 @@ export default {
         this.condition.rule.filter[this.columnName].keyword = this.condition.multipleSelection.map(ele => ele.title)
         this.condition.rule.filter[this.columnName].feature = 'in'
       }
-      if (!this.selectedLen){
-        delete this.condition.rule.filter[this.columnName]
-      }
       this.$emit('submit', {rule: this.condition.rule})
     },
-    open(columnName, dbName, clName, page) {
+    open(columnName, page, conditions, listByColumn) {
       this.columnName = columnName
-      this.dbName = dbName
-      this.clName = clName
       this.page = page
+      this.conditions = conditions
+      this.listByColumn = listByColumn
       if (!this.condition.rule.filter[this.columnName]){
         this.condition.rule.filter[this.columnName] = {}
       }

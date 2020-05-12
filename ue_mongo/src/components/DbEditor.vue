@@ -1,9 +1,5 @@
 <template>
-  <el-dialog
-    :visible.sync="dialogVisible"
-    :destroy-on-close="destroyOnClose"
-    :close-on-click-modal="closeOnClickModal"
-  >
+  <el-dialog :visible.sync="dialogVisible" :destroy-on-close="destroyOnClose" :close-on-click-modal="closeOnClickModal">
     <el-form ref="form" :model="database" label-position="top">
       <el-form-item label="数据库名称（英文）">
         <el-input v-model="database.name" :disabled="mode==='update'"></el-input>
@@ -11,12 +7,12 @@
       <el-form-item label="数据库显示名（中文）">
         <el-input v-model="database.title"></el-input>
       </el-form-item>
-      <el-form-item label="库拓展属性（选填）">
+      <el-form-item label="扩展属性（选填）">
         <el-select placeholder="请选择" v-model="database.extensionInfo.schemaId" clearable filterable>
           <el-option v-for="item in extensions" :key="item._id" :label="item.title" :value="item._id"></el-option>
         </el-select>
       </el-form-item>
-      <el-form-item label="拓展属性详情（选填）" v-show="database.extensionInfo.schemaId">
+      <el-form-item label="扩展属性详情（选填）" v-show="database.extensionInfo.schemaId">
         <tms-attr-editor :schemas="extensions" :id="database.extensionInfo.schemaId" :doc="database.extensionInfo.info"></tms-attr-editor>
       </el-form-item>
       <el-form-item label="说明">
@@ -46,10 +42,16 @@ export default {
   name: 'DbEditor',
   props: {
     dialogVisible: { default: true },
+    bucketName: { type: String },
     database: {
       type: Object,
       default: function() {
-        return { name: '', title: '', description: '', extensionInfo: { schemaId: '', info: {} } }
+        return {
+          name: '',
+          title: '',
+          description: '',
+          extensionInfo: { schemaId: '', info: {} }
+        }
       }
     }
   },
@@ -63,7 +65,7 @@ export default {
     }
   },
   mounted() {
-    apiSchema.list('db').then(extensions => {
+    apiSchema.list(this.bucketName, 'db').then(extensions => {
       this.extensions = extensions
     })
   },
@@ -71,14 +73,17 @@ export default {
     onSubmit() {
       if (this.mode === 'update') {
         apiDb
-          .update(this.database.name, this.database)
+          .update(this.bucketName, this.database.name, this.database)
           .then(newDb => this.$emit('submit', newDb))
       } else if (this.mode === 'create') {
-        apiDb.create(this.database).then(newDb => this.$emit('submit', newDb))
+        apiDb
+          .create(this.bucketName, this.database)
+          .then(newDb => this.$emit('submit', newDb))
       }
     },
-    open(mode, db) {
+    open(mode, bucketName, db) {
       this.mode = mode
+      this.bucketName = bucketName
       if (mode === 'update') Object.assign(this.database, db)
       this.$mount()
       document.body.appendChild(this.$el)

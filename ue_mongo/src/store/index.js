@@ -60,6 +60,7 @@ export default new Vuex.Store({
       if (index !== -1) {
         state.conditions.splice(index, 1)
       }
+      condition.rule.filter = {[condition.columnName]: condition.rule.filter[condition.columnName]}
       state.conditions.push(condition)
     },
     conditionDelBtn(state, payload) {
@@ -117,8 +118,8 @@ export default new Vuex.Store({
     },
     removeDatabase() {},
     removeCollection({ commit }, payload) {
-      const { db, collection } = payload
-      apis.collection.remove(db, collection.name).then(() => {
+      const { bucket, db, collection } = payload
+      apis.collection.remove(bucket, db, collection.name).then(() => {
         commit({ type: 'removeCollection', collection })
         return { collection }
       })

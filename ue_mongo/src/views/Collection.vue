@@ -10,13 +10,23 @@
     <template v-slot:center>
       <el-table id="tables" :data="documents" stripe ref="multipleTable" :height="tableHeight" @selection-change="handleSelectDocument">
         <el-table-column fixed="left" type="selection" width="55"></el-table-column>
-        <el-table-column v-for="(s, k) in collection.schema.body.properties" :key="k" :prop="k">
-          <template slot="header">
-            <span>{{ s.title }}</span>
-            <img src="../assets/icon_filter.png" class="icon_filter" @click="handleSelect(s, k)">
+        <el-table-column
+          v-for="(s, k) in collection.schema.body.properties"
+          :key="k"
+          :prop="k">
+					<template slot="header">
+						<i v-if="s.description" class="el-icon-info" :title="s.description"></i>
+						<i v-if="s.required" style="color:red">*</i>
+						<span> {{s.title}} </span>
+						<img src="../assets/icon_filter.png" class="icon_filter" @click="handleSelect(s, k)">
           </template>
           <template slot-scope="scope">
             <span v-if="s.type==='boolean'">{{ scope.row[k] ? '是' : '否' }}</span>
+						<span v-else-if="s.type==='array'&&s.format==='file'">
+							<span v-for="(i, v) in scope.row[k]" :key="v">
+								<a href @click="handleDownload(i)">{{i.name}}</a><br/>
+							</span>
+						</span>
             <span v-else>{{ scope.row[k] }}</span>
           </template>
         </el-table-column>
@@ -158,11 +168,7 @@ export default {
     return {
       tableHeight: 0,
       moveCheckList: [],
-      option: '',
-      keyword: '',
-      feature: '',
       filter: {},
-      tags: [],
       page: {
         at: 1,
         size: 100,
@@ -173,33 +179,12 @@ export default {
       plugins: { document: { submits: [], transforms: {} } },
       dialogPage: {
         at: 1,
-        size: 20
+        size: 100
       }
     }
   },
   computed: {
     ...mapState(['documents', 'conditions']),
-    features() {
-      let features = {
-        start: {
-          title: '以"' + this.keyword + '"开头',
-          value: 'start'
-        },
-        notStart: {
-          title: '不以"' + this.keyword + '"开头',
-          value: 'notStart'
-        },
-        end: {
-          title: '以"' + this.keyword + '"结尾',
-          value: 'end'
-        },
-        notEnd: {
-          title: '不以"' + this.keyword + '"结尾',
-          value: 'notEnd'
-        }
-      }
-      return features
-    },
     totalByAll() {
       return Object.keys(this.filter).length ? 0 : this.page.total
     },
@@ -261,6 +246,7 @@ export default {
     handleSelect(obj, columnName) {
       this.dialogPage.at = 1
       const select = new Vue(SelectCondition)
+      let filter, orderBy
       if (this.conditions.length) {
         const columnobj = this.conditions.find(
           ele => ele.columnName === columnName
@@ -272,35 +258,25 @@ export default {
           select.condition.selectValue = columnobj.selectValue
           select.condition.rule = columnobj.rule
         }
-        const { filter, orderBy } = rule
-        this
-          .listByColumn(
-            columnName,
-            filter,
-            orderBy,
-            this.dialogPage.at,
-            this.dialogPage.size
-          )
-          .then(columnResult => {
-            select.condition.selectResult = columnResult
-            // 暂时先用延迟解决，该方法还需改进
-            setTimeout(() => {
-              select.toggleSelection(columnResult)
-            }, 0)
-          })
-      } else {
-        this
-          .listByColumn(
-            columnName,
-            undefined,
-            undefined,
-            this.dialogPage.at,
-            this.dialogPage.size
-          )
-          .then(columnResult => {
-            select.condition.selectResult = columnResult
-          })
+        filter = rule.filter
+        orderBy = rule.orderBy
       }
+      this
+        .listByColumn(
+          columnName,
+          this.conditions.length ? filter: undefined,
+          this.conditions.length ? orderBy: undefined,
+          this.dialogPage.at,
+          this.dialogPage.size
+        )
+        .then(columnResult => {
+          select.condition.selectResult = columnResult
+          select.condition.multipleSelection = columnResult
+          // 暂时先用延迟解决，该方法还需改进
+          setTimeout(() => {
+            select.toggleSelection(columnResult)
+          }, 0)
+        })
       select
         .open(
           columnName, 
@@ -395,7 +371,11 @@ export default {
           this.page.total = result.result.total
           this.tableHeight = window.innerHeight * 0.8
         })
-    },
+		},
+		handleDownload(file) {
+			const access_token = sessionStorage.getItem('access_token')
+      window.open(`${process.env.VUE_APP_BACK_API_FS}${file.url}?access_token=${access_token}`)
+		},
     createDocument() {
       let editor = new Vue(DocEditor)
       editor.open(this.bucketName, this.dbName, this.collection).then(() => {
@@ -516,7 +496,7 @@ export default {
       ) {
         let result = await apiDoc
           .move(
-            this.bucketName,
+            _this.bucketName,
             _this.dbName,
             _this.clName,
             dbName,
@@ -577,7 +557,7 @@ export default {
         config
       confirm = new Vue(DomainEditor)
       config = { title: '迁移到' }
-      confirm.open(config).then(fields => {
+      confirm.open(this.bucketName, config).then(fields => {
         const { dbName, clName } = fields
         if (command === 'checked') {
           this.fnMoveDocument(dbName, clName, transforms, param, 0, 0, 0).then(
@@ -618,7 +598,7 @@ export default {
       let confirm, config
       confirm = new Vue(DomainEditor)
       config = { title: '选定规则表' }
-      confirm.open(config).then(fields => {
+      confirm.open(this.bucketName, config).then(fields => {
         const { dbName: ruleDbName, clName: ruleClName } = fields
         let moveByRule = new Vue(MoveByRulePlugin)
         moveByRule.showDialog(
@@ -686,6 +666,7 @@ export default {
     },
     handleSize(val) {
       this.page.size = val
+      this.dialogPage.size = val
       this.listDocument()
     },
     handleCurrentPage(val) {

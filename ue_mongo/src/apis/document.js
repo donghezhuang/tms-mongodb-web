@@ -101,11 +101,11 @@ export default {
     return TmsAxios.ins('mongodb-api')
       .post(`${base}/uploadToImport`, file, { params })
       .then(rst => rst.data.result)
-  },
-  export(bucket, dbName, clName) {
-    const params = { bucket, db: dbName, cl: clName }
+	},
+	export(bucket, dbName, clName, param) {
+    const params = { bucket, db: dbName, cl: clName,  }
     return TmsAxios.ins('mongodb-api')
-      .get(`${base}/export`, { params })
+      .post(`${base}/export`, param, { params })
       .then(rst => rst.data.result)
 	},
 	upload(query, fileData, config) {

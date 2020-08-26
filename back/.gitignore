@@ -5,3 +5,5 @@ public/
 .env.*
 *.xlsx
 config/*.local.js
+config/*.local2.js
+config/plugin.js
